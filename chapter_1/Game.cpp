@@ -1,5 +1,7 @@
 ﻿#include "Game.h"
 
+#include <vector>
+
 Game::Game()
     :mWindow(nullptr)
     ,mRenderer(nullptr)
@@ -8,7 +10,9 @@ Game::Game()
 }
 
 Uint32 mTicksCount = 0;
-int mPaddleDir = 0;
+int mPaddleDirLeft = 0;
+int mPaddleDirRight = 0;
+std::vector<Ball> mBalls;
 
 bool Game::Initialize()
 {
@@ -45,6 +49,16 @@ bool Game::Initialize()
         SDL_Log("Failed to create renderer: %s", SDL_GetError());
         return false;
     }
+    
+    mBalls.push_back({
+        Vector2{ screenWidth / 2.0f, screenHeight / 2.0f },
+        Vector2{ 200.0f, 235.0f }
+    });
+
+    mBalls.push_back({
+        Vector2{ screenWidth / 2.0f, screenHeight / 2.0f },
+        Vector2{ -200.0f, 150.0f }
+    });
 
     return true;
 }
@@ -78,14 +92,24 @@ void Game::ProcessInput()
         mIsRunning = false;
     }
     
-    mPaddleDir = 0;
+    mPaddleDirLeft = 0;
     if (state[SDL_SCANCODE_W])
     {
-        mPaddleDir -= 1;
+        mPaddleDirLeft -= 1;
     }
     if (state[SDL_SCANCODE_S])
     {
-        mPaddleDir += 1;
+        mPaddleDirLeft += 1;
+    }
+    
+    mPaddleDirRight = 0;
+    if (state[SDL_SCANCODE_UP])
+    {
+        mPaddleDirRight -= 1;
+    }
+    if (state[SDL_SCANCODE_DOWN])
+    {
+        mPaddleDirRight += 1;
     }
 }
 
@@ -102,55 +126,76 @@ void Game::UpdateGame()
     if ( deltaTime > 0.5f )
         deltaTime = 0.5f;
     
-    // paddle
-    if (mPaddleDir != 0)
+    // paddle left
+    if (mPaddleDirLeft != 0)
     {
-        mPaddlePos.y += mPaddleDir * paddleSpeed * deltaTime;
+        mPaddlePosLeft.y += mPaddleDirLeft * paddleSpeed * deltaTime;
         
-        if (mPaddlePos.y < (paddleHeight/2.0f + thickness))
+        if (mPaddlePosLeft.y < (paddleHeight/2.0f + thickness))
         {
-            mPaddlePos.y = paddleHeight/2.0f + thickness;
+            mPaddlePosLeft.y = paddleHeight/2.0f + thickness;
         }
-        else if (mPaddlePos.y > 768.0f - paddleHeight/2.0f - thickness)
+        else if (mPaddlePosLeft.y > 768.0f - paddleHeight/2.0f - thickness)
         {
-            mPaddlePos.y = screenHeight - paddleHeight/2.0f - thickness;
+            mPaddlePosLeft.y = screenHeight - paddleHeight/2.0f - thickness;
+        }
+    }
+    
+    // paddle right
+    if (mPaddleDirRight != 0)
+    {
+        mPaddlePosRight.y += mPaddleDirRight * paddleSpeed * deltaTime;
+        
+        if (mPaddlePosRight.y < (paddleHeight/2.0f + thickness))
+        {
+            mPaddlePosRight.y = paddleHeight/2.0f + thickness;
+        }
+        else if (mPaddlePosRight.y > 768.0f - paddleHeight/2.0f - thickness)
+        {
+            mPaddlePosRight.y = screenHeight - paddleHeight/2.0f - thickness;
         }
     }
     
     // ball collision
     
-    // collide top
-    if ((mBallPos.y <= thickness)  && mBallVelocity.y < 0.0f)
+    for (auto& ball : mBalls)
     {
-        mBallVelocity.y *= -1.0f;
-    }
-    
-    // collide bottom
-    if ((mBallPos.y >= screenHeight - thickness)  && mBallVelocity.y > 0.0f)
-    {
-        mBallVelocity.y *= -1.0f;
-    }
-    
-    // collide right
-    if (mBallPos.x >= screenWidth - thickness)
-    {
-        mBallVelocity.x *= -1.0f;
-    }
-    
-    // collide left (paddle)
-    float diff = mPaddlePos.y - mBallPos.y;
-    diff = (diff > 0.0f) ? diff : -diff;
+        // collide top
+        if ((ball.position.y <= thickness) && ball.velocity.y < 0.0f)
+        {
+            ball.velocity.y *= -1.0f;
+        }
 
-    if (mBallVelocity.x < 0.0f &&
-        diff <= paddleHeight / 2.0f &&
-        mBallPos.x <= mPaddlePos.x + paddleLength &&
-        mBallPos.x >= mPaddlePos.x)
-    {
-        mBallVelocity.x *= -1.0f;
+        // collide bottom
+        if ((ball.position.y >= screenHeight - thickness) && ball.velocity.y > 0.0f)
+        {
+            ball.velocity.y *= -1.0f;
+        }
+
+        // collide right paddle
+        float diff = mPaddlePosRight.y - ball.position.y;
+        diff = (diff > 0.0f) ? diff : -diff;
+        if (ball.velocity.x > 0.0f &&
+            diff <= paddleHeight / 2.0f &&
+            ball.position.x + thickness / 2.0f >= mPaddlePosRight.x)
+        {
+            ball.velocity.x *= -1.0f;
+        }
+
+        // collide left paddle
+        diff = mPaddlePosLeft.y - ball.position.y;
+        diff = (diff > 0.0f) ? diff : -diff;
+        if (ball.velocity.x < 0.0f &&
+            diff <= paddleHeight / 2.0f &&
+            ball.position.x - thickness / 2.0f <= mPaddlePosLeft.x + paddleLength &&
+            ball.position.x >= mPaddlePosLeft.x)
+        {
+            ball.velocity.x *= -1.0f;
+        }
+
+        ball.position.x += ball.velocity.x * deltaTime;
+        ball.position.y += ball.velocity.y * deltaTime;
     }
-    
-    mBallPos.x += mBallVelocity.x * deltaTime;
-    mBallPos.y += mBallVelocity.y * deltaTime;
 }
 
 void Game::GenerateOutput()
@@ -166,34 +211,43 @@ void Game::GenerateOutput()
     // draw walls
     
     const SDL_Rect wall_top { 0,0,screenWidth,thickness };
-    const SDL_Rect wall_right { screenWidth - thickness,0,thickness,screenHeight };
     const SDL_Rect wall_bottom { 0,screenHeight - thickness,screenWidth,thickness };
     
     SDL_RenderFillRect(mRenderer, &wall_top);
-    SDL_RenderFillRect(mRenderer, &wall_right);
     SDL_RenderFillRect(mRenderer, &wall_bottom);
     
-    // draw ball
+    // draw balls
     
-    const SDL_Rect ball{
-        static_cast<int>(mBallPos.x - thickness/2),
-        static_cast<int>(mBallPos.y - thickness/2),
-        thickness,
-        thickness
-    };
-
-    SDL_RenderFillRect(mRenderer, &ball);
+    for (const auto& ball : mBalls)
+    {
+        const SDL_Rect ballRect{
+            static_cast<int>(ball.position.x - thickness / 2),
+            static_cast<int>(ball.position.y - thickness / 2),
+            thickness,
+            thickness
+        };
+        SDL_RenderFillRect(mRenderer, &ballRect);
+    }
     
-    // draw paddle
+    // draw paddles
     
-    const SDL_Rect paddle{
-        static_cast<int>(mPaddlePos.x),
-        static_cast<int>(mPaddlePos.y - paddleHeight/2),
+    const SDL_Rect paddleLeft{
+        static_cast<int>(mPaddlePosLeft.x),
+        static_cast<int>(mPaddlePosLeft.y - paddleHeight/2),
         paddleLength,
         paddleHeight
     };
     
-    SDL_RenderFillRect(mRenderer, &paddle);
+    SDL_RenderFillRect(mRenderer, &paddleLeft);
+    
+    const SDL_Rect paddleRight{
+        static_cast<int>(mPaddlePosRight.x),
+        static_cast<int>(mPaddlePosRight.y - paddleHeight/2),
+        paddleLength,
+        paddleHeight
+    };
+    
+    SDL_RenderFillRect(mRenderer, &paddleRight);
     
     SDL_RenderPresent(mRenderer);
 }
