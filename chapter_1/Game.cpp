@@ -135,7 +135,7 @@ void Game::UpdateGame()
         {
             mPaddlePosLeft.y = paddleHeight/2.0f + thickness;
         }
-        else if (mPaddlePosLeft.y > 768.0f - paddleHeight/2.0f - thickness)
+        else if (mPaddlePosLeft.y > screenHeight - paddleHeight/2.0f - thickness)
         {
             mPaddlePosLeft.y = screenHeight - paddleHeight/2.0f - thickness;
         }
@@ -150,7 +150,7 @@ void Game::UpdateGame()
         {
             mPaddlePosRight.y = paddleHeight/2.0f + thickness;
         }
-        else if (mPaddlePosRight.y > 768.0f - paddleHeight/2.0f - thickness)
+        else if (mPaddlePosRight.y > screenHeight - paddleHeight/2.0f - thickness)
         {
             mPaddlePosRight.y = screenHeight - paddleHeight/2.0f - thickness;
         }
@@ -177,7 +177,8 @@ void Game::UpdateGame()
         diff = (diff > 0.0f) ? diff : -diff;
         if (ball.velocity.x > 0.0f &&
             diff <= paddleHeight / 2.0f &&
-            ball.position.x + thickness / 2.0f >= mPaddlePosRight.x)
+            ball.position.x + thickness / 2.0f >= mPaddlePosRight.x &&
+            ball.position.x <= mPaddlePosRight.x)
         {
             ball.velocity.x *= -1.0f;
         }
@@ -202,7 +203,7 @@ void Game::GenerateOutput()
 {
     SDL_SetRenderDrawColor(
         mRenderer,
-        0, 0, 255, 255
+        0, 0, 0, 255
     );
     SDL_RenderClear(mRenderer);
     
@@ -215,19 +216,6 @@ void Game::GenerateOutput()
     
     SDL_RenderFillRect(mRenderer, &wall_top);
     SDL_RenderFillRect(mRenderer, &wall_bottom);
-    
-    // draw balls
-    
-    for (const auto& ball : mBalls)
-    {
-        const SDL_Rect ballRect{
-            static_cast<int>(ball.position.x - thickness / 2),
-            static_cast<int>(ball.position.y - thickness / 2),
-            thickness,
-            thickness
-        };
-        SDL_RenderFillRect(mRenderer, &ballRect);
-    }
     
     // draw paddles
     
@@ -248,6 +236,23 @@ void Game::GenerateOutput()
     };
     
     SDL_RenderFillRect(mRenderer, &paddleRight);
+    
+    // draw balls
+    
+    SDL_SetRenderDrawColor(mRenderer,0,255,0,255);
+    
+    for (const auto& ball : mBalls)
+    {
+        const SDL_Rect ballRect{
+            static_cast<int>(ball.position.x - thickness / 2),
+            static_cast<int>(ball.position.y - thickness / 2),
+            thickness,
+            thickness
+        };
+        SDL_RenderFillRect(mRenderer, &ballRect);
+    }
+    
+    
     
     SDL_RenderPresent(mRenderer);
 }
