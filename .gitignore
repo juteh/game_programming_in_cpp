@@ -1,0 +1,20 @@
+# vcpkg komplett ignorieren (wird separat geklont, nicht Teil des Repos)
+vcpkg/
+
+# CMake Build-Ordner
+cmake-build-*/
+build/
+out/
+
+# JetBrains Rider / CLion
+.idea/
+
+# Compiler-Output
+*.obj
+*.exe
+*.dll
+*.pdb
+*.ilk
+
+# Sonstiges
+*.log
